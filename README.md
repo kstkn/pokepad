@@ -1,100 +1,54 @@
-# Soundboard App
+# File Cards Viewer
 
-A simple cross-platform soundboard application built with Go. This app allows you to select audio files (MP3, WAV, OGG) and assign them to buttons for quick playback. Works on Windows, macOS, and Linux.
+A simple Electron app that lets you select files and displays them as evenly distributed cards in a grid layout (minimum 4x4).
 
 ## Features
 
-- Select audio files (MP3, WAV, OGG formats)
-- Assign audio files to buttons with custom labels
-- Click buttons to play sounds
-- Remove sounds from the board
-- Clean, simple GUI interface
+- Select multiple files using a file picker
+- Files are displayed as cards in an evenly distributed grid
+- Minimum 4x4 grid (16 cards) - empty slots are shown if fewer files are selected
+- Modern, clean UI with hover effects
 
-## Requirements
+## Installation
 
-- Go 1.21 or later
-- Windows, macOS, or Linux (tested on Windows 10/11 and macOS)
-
-## Building
-
-### On macOS:
-
+1. Install dependencies:
 ```bash
-go mod download
-go build -o soundboard .
+npm install
 ```
-
-Then run: `./soundboard`
-
-### On Windows:
-
-1. Open Command Prompt or PowerShell in the project directory
-2. Run:
-   ```bash
-   go mod download
-   go build -o soundboard.exe .
-   ```
-
-Or simply run the provided batch file:
-```bash
-build-windows.bat
-```
-
-### On Linux:
-
-```bash
-go mod download
-go build -o soundboard .
-```
-
-### Cross-compiling:
-
-Cross-compiling GUI apps with Fyne requires CGO enabled. For Windows from macOS/Linux, you'll need:
-- CGO enabled
-- MinGW-w64 or similar Windows C compiler toolchain
-- Then run: `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -o soundboard.exe .`
 
 ## Running
 
-After building, run the executable:
-- **macOS/Linux:** `./soundboard`
-- **Windows:** `./soundboard.exe` or double-click `soundboard.exe`
+Start the app:
+```bash
+npm start
+```
 
 ## Usage
 
-1. Click the "Add Sound" button
-2. Select an audio file (MP3, WAV, or OGG format)
-3. The file will appear as a button with the filename as the label
-4. Click any button to play its sound
-5. Click the "×" button next to a sound to remove it
+1. Click the "Select Files" button
+2. Choose one or more files from the file picker
+3. Files will be displayed as cards in a grid layout
+4. If you select fewer than 16 files, empty placeholder cards will fill the grid to maintain the 4x4 minimum
 
-## Supported Formats
+## Building for Mac
 
-- MP3 (.mp3)
-- WAV (.wav)
-- M4A (.m4a) - Requires ffmpeg to be installed (see below)
-- OGG (.ogg) - Note: Full OGG support may require additional decoders
+To compile the app for Mac:
 
-### M4A Support
+1. Install dependencies (if not already done):
+```bash
+npm install
+```
 
-M4A files are supported through automatic conversion using ffmpeg. To use M4A files:
+2. Build for Mac:
+```bash
+npm run build:mac
+```
 
-1. Install ffmpeg:
-   - **macOS:** `brew install ffmpeg`
-   - **Windows:** Download from https://ffmpeg.org/download.html or use `choco install ffmpeg`
-   - **Linux:** `sudo apt-get install ffmpeg` or `sudo yum install ffmpeg`
+This will create a DMG file in the `dist` folder that you can distribute. The build includes both Intel (x64) and Apple Silicon (arm64) versions.
 
-2. Make sure ffmpeg is in your system PATH
+Alternatively, you can build for all platforms:
+```bash
+npm run build
+```
 
-3. The app will automatically convert M4A files to WAV when loading them
-
-## Notes
-
-- The app creates a new audio stream for each playback, allowing multiple sounds to play simultaneously
-- Audio files are loaded from disk each time they're played, so make sure the files remain accessible
-- The app uses a 44.1kHz sample rate for audio playback
-
-## License
-
-This is a simple example application. Feel free to modify and use as needed.
-
+**Note:** The first build may take a while as electron-builder downloads the necessary Electron binaries for packaging.

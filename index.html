@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>soundboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container" style="min-height: 100vh; background: #1a1a1a;">
+    <header style="padding: 8px; display: flex; justify-content: flex-end;">
+      <button id="selectFilesBtn" class="select-btn" style="background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">Select Files</button>
+    </header>
+    <div id="cardsContainer" class="cards-container placeholder" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #666; text-align: center;">
+      <div>
+        <p style="font-size: 18px; margin: 10px 0;">Click "Select Files" to get started</p>
+        <p class="hint" style="font-size: 14px; color: #555;">Files will be added to existing cards</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Rename Dialog -->
+  <div id="renameDialog" class="rename-dialog" style="display: none;">
+    <div class="rename-dialog-content">
+      <h3>Rename Card</h3>
+      <input type="text" id="renameInput" class="rename-input" placeholder="Enter new name">
+      <div class="rename-dialog-buttons">
+        <button id="renameCancelBtn" class="rename-btn-cancel">Cancel</button>
+        <button id="renameOkBtn" class="rename-btn-ok">OK</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
+</html>
+
