@@ -1,6 +1,6 @@
 # Soundboard App
 
-A simple soundboard application for Windows built with Go. This app allows you to select audio files (MP3, WAV, OGG) and assign them to buttons for quick playback.
+A simple cross-platform soundboard application built with Go. This app allows you to select audio files (MP3, WAV, OGG) and assign them to buttons for quick playback. Works on Windows, macOS, and Linux.
 
 ## Features
 
@@ -13,11 +13,18 @@ A simple soundboard application for Windows built with Go. This app allows you t
 ## Requirements
 
 - Go 1.21 or later
-- Windows OS (tested on Windows 10/11)
+- Windows, macOS, or Linux (tested on Windows 10/11 and macOS)
 
 ## Building
 
-**Important:** This app must be built on Windows, or cross-compiled with CGO enabled.
+### On macOS:
+
+```bash
+go mod download
+go build -o soundboard .
+```
+
+Then run: `./soundboard`
 
 ### On Windows:
 
@@ -33,11 +40,16 @@ Or simply run the provided batch file:
 build-windows.bat
 ```
 
-### Cross-compiling from macOS/Linux:
+### On Linux:
 
-Cross-compiling GUI apps with Fyne requires CGO and a Windows C compiler toolchain. It's recommended to build directly on Windows instead.
+```bash
+go mod download
+go build -o soundboard .
+```
 
-If you must cross-compile, you'll need:
+### Cross-compiling:
+
+Cross-compiling GUI apps with Fyne requires CGO enabled. For Windows from macOS/Linux, you'll need:
 - CGO enabled
 - MinGW-w64 or similar Windows C compiler toolchain
 - Then run: `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -o soundboard.exe .`
@@ -45,11 +57,8 @@ If you must cross-compile, you'll need:
 ## Running
 
 After building, run the executable:
-```bash
-./soundboard.exe
-```
-
-Or on Windows, double-click `soundboard.exe`.
+- **macOS/Linux:** `./soundboard`
+- **Windows:** `./soundboard.exe` or double-click `soundboard.exe`
 
 ## Usage
 
@@ -63,7 +72,21 @@ Or on Windows, double-click `soundboard.exe`.
 
 - MP3 (.mp3)
 - WAV (.wav)
+- M4A (.m4a) - Requires ffmpeg to be installed (see below)
 - OGG (.ogg) - Note: Full OGG support may require additional decoders
+
+### M4A Support
+
+M4A files are supported through automatic conversion using ffmpeg. To use M4A files:
+
+1. Install ffmpeg:
+   - **macOS:** `brew install ffmpeg`
+   - **Windows:** Download from https://ffmpeg.org/download.html or use `choco install ffmpeg`
+   - **Linux:** `sudo apt-get install ffmpeg` or `sudo yum install ffmpeg`
+
+2. Make sure ffmpeg is in your system PATH
+
+3. The app will automatically convert M4A files to WAV when loading them
 
 ## Notes
 
