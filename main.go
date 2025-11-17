@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"io"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
@@ -24,10 +26,12 @@ import (
 
 type SoundButton struct {
 	button         *widget.Button
+	buttonBg       *canvas.Rectangle
 	progressBar    *widget.ProgressBar
 	container      *fyne.Container
 	filePath       string
 	format         beep.Format
+	color          color.RGBA
 	isPlaying      bool
 	isPaused       bool
 	ctrl           *beep.Ctrl
@@ -43,6 +47,7 @@ type SoundButton struct {
 
 type SavedSound struct {
 	FilePath string `json:"filePath"`
+	Color    string `json:"color,omitempty"` // Store color as hex string
 }
 
 // CustomTheme removes rounded corners from buttons
@@ -223,6 +228,11 @@ func (sb *Soundboard) addSound() {
 		})
 		soundBtn.button.Importance = widget.HighImportance
 
+		// Initialize color (default white) - stored but not visually applied
+		soundBtn.color = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+		soundBtn.buttonBg = nil // Not using background rectangle
+		coloredButton := soundBtn.button
+
 		// Create restart button (small square) with themed icon
 		restartBtn := widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {
 			sb.restartSound(soundBtn)
@@ -241,17 +251,27 @@ func (sb *Soundboard) addSound() {
 		removeBtnContainer.Resize(fyne.NewSize(40, 40))
 		removeBtn.Resize(fyne.NewSize(40, 40))
 
-		// Create container for control buttons at the bottom (small squares)
-		buttonRow := container.NewHBox(restartBtnContainer, removeBtnContainer)
+		// Create color picker button (small square)
+		colorBtn := widget.NewButtonWithIcon("", theme.ColorPaletteIcon(), func() {
+			sb.showColorPicker(soundBtn)
+		})
+		colorBtn.Importance = widget.MediumImportance
+		colorBtnContainer := container.NewWithoutLayout(colorBtn)
+		colorBtnContainer.Resize(fyne.NewSize(40, 40))
+		colorBtn.Resize(fyne.NewSize(40, 40))
 
-		// Create container with button and progress bar (main content)
-		btnContent := container.NewVBox(
-			soundBtn.button,
+		// Create container for control buttons at the bottom (small squares)
+		buttonRow := container.NewHBox(restartBtnContainer, removeBtnContainer, colorBtnContainer)
+
+		// Create bottom section with progress bar and control buttons
+		bottomSection := container.NewVBox(
 			soundBtn.progressBar,
+			buttonRow,
 		)
 
-		// Create container with main content and control buttons at bottom
-		btnContainer := container.NewBorder(nil, buttonRow, nil, nil, btnContent)
+		// Create container with main button filling center and bottom section at bottom
+		// The main button will expand to fill all available vertical space
+		btnContainer := container.NewBorder(nil, bottomSection, nil, nil, coloredButton)
 		soundBtn.container = btnContainer
 
 		sb.sounds = append(sb.sounds, soundBtn)
@@ -468,6 +488,70 @@ func (sb *Soundboard) confirmRemoveSound(soundBtn *SoundButton) {
 		},
 		sb.window,
 	)
+}
+
+func (sb *Soundboard) showColorPicker(soundBtn *SoundButton) {
+	// Material Design color palette (500 shades)
+	colors := []color.RGBA{
+		{R: 244, G: 67, B: 54, A: 255},   // Red
+		{R: 233, G: 30, B: 99, A: 255},   // Pink
+		{R: 156, G: 39, B: 176, A: 255},  // Purple
+		{R: 103, G: 58, B: 183, A: 255},  // Deep Purple
+		{R: 63, G: 81, B: 181, A: 255},   // Indigo
+		{R: 33, G: 150, B: 243, A: 255},  // Blue
+		{R: 3, G: 169, B: 244, A: 255},   // Light Blue
+		{R: 0, G: 188, B: 212, A: 255},   // Cyan
+		{R: 0, G: 150, B: 136, A: 255},   // Teal
+		{R: 76, G: 175, B: 80, A: 255},   // Green
+		{R: 139, G: 195, B: 74, A: 255},  // Light Green
+		{R: 205, G: 220, B: 57, A: 255},  // Lime
+		{R: 255, G: 235, B: 59, A: 255},  // Yellow
+		{R: 255, G: 193, B: 7, A: 255},   // Amber
+		{R: 255, G: 152, B: 0, A: 255},   // Orange
+		{R: 255, G: 87, B: 34, A: 255},   // Deep Orange
+		{R: 121, G: 85, B: 72, A: 255},   // Brown
+		{R: 158, G: 158, B: 158, A: 255}, // Grey
+		{R: 96, G: 125, B: 139, A: 255},  // Blue Grey
+		{R: 255, G: 255, B: 255, A: 255}, // White
+	}
+
+	// Create color swatches in a grid
+	colorButtons := container.NewGridWithColumns(5)
+	for i := range colors {
+		c := colors[i] // Capture loop variable
+		// Create a colored rectangle to show the color
+		colorRect := canvas.NewRectangle(c)
+		colorRect.SetMinSize(fyne.NewSize(40, 40))
+		colorRect.StrokeColor = color.RGBA{R: 150, G: 150, B: 150, A: 255}
+		colorRect.StrokeWidth = 2
+
+		// Create a button with no text and low importance to minimize hover effect
+		colorBtn := widget.NewButton("", func() {
+			sb.setCardColor(soundBtn, c)
+		})
+		colorBtn.Importance = widget.LowImportance
+
+		// Use Max container to make button fill the rectangle area
+		// Stack rectangle behind button - button will be mostly transparent
+		colorContainer := container.NewMax(colorRect, colorBtn)
+		colorButtons.Add(colorContainer)
+	}
+
+	// Create dialog content
+	content := container.NewVBox(
+		widget.NewLabel("Select a color:"),
+		colorButtons,
+	)
+
+	// Show dialog
+	dialog.ShowCustom("Choose Color", "Close", content, sb.window)
+}
+
+func (sb *Soundboard) setCardColor(soundBtn *SoundButton, c color.RGBA) {
+	soundBtn.color = c
+	// Color is stored but not visually applied (Fyne buttons don't support custom colors easily)
+	// Save sounds to persist color
+	sb.saveSounds()
 }
 
 func (sb *Soundboard) playSoundFromPosition(soundBtn *SoundButton, startPos int) {
@@ -734,13 +818,37 @@ func (sb *Soundboard) removeSound(soundBtn *SoundButton) {
 	sb.saveSounds()
 }
 
+func (sb *Soundboard) colorToHex(c color.RGBA) string {
+	return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B)
+}
+
+func (sb *Soundboard) hexToColor(hex string) color.RGBA {
+	// Default to white if invalid
+	defaultColor := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	if hex == "" || !strings.HasPrefix(hex, "#") {
+		return defaultColor
+	}
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return defaultColor
+	}
+	var r, g, b uint8
+	_, err := fmt.Sscanf(hex, "%02X%02X%02X", &r, &g, &b)
+	if err != nil {
+		return defaultColor
+	}
+	return color.RGBA{R: r, G: g, B: b, A: 255}
+}
+
 func (sb *Soundboard) saveSounds() {
 	fmt.Printf("saveSounds called - current sounds count: %d\n", len(sb.sounds))
 	savedSounds := make([]SavedSound, 0, len(sb.sounds))
 	for i, s := range sb.sounds {
 		fmt.Printf("  Saving sound %d: %s\n", i+1, s.filePath)
+		colorHex := sb.colorToHex(s.color)
 		savedSounds = append(savedSounds, SavedSound{
 			FilePath: s.filePath,
+			Color:    colorHex,
 		})
 	}
 
@@ -819,8 +927,9 @@ func (sb *Soundboard) loadSavedSounds() {
 			continue
 		}
 
-		// Load the sound
-		if sb.loadSoundFromPath(saved.FilePath) {
+		// Load the sound with saved color
+		savedColor := sb.hexToColor(saved.Color)
+		if sb.loadSoundFromPath(saved.FilePath, savedColor) {
 			loadedCount++
 			fmt.Printf("  Successfully loaded (total: %d)\n", len(sb.sounds))
 		} else {
@@ -836,7 +945,7 @@ func (sb *Soundboard) loadSavedSounds() {
 	}
 }
 
-func (sb *Soundboard) loadSoundFromPath(filePath string) bool {
+func (sb *Soundboard) loadSoundFromPath(filePath string, cardColor color.RGBA) bool {
 	// Check if file has a valid audio extension
 	ext := strings.ToLower(filepath.Ext(filePath))
 	validExts := map[string]bool{
@@ -912,11 +1021,21 @@ func (sb *Soundboard) loadSoundFromPath(filePath string) bool {
 		return fmt.Sprintf("%s / %s", elapsedStr, totalStr)
 	}
 
+	// Initialize color (use saved color or default white)
+	if cardColor.R == 0 && cardColor.G == 0 && cardColor.B == 0 && cardColor.A == 0 {
+		cardColor = color.RGBA{R: 255, G: 255, B: 255, A: 255} // Default white
+	}
+	soundBtn.color = cardColor
+
 	// Create button
 	soundBtn.button = widget.NewButton(fileName, func() {
 		sb.toggleSound(soundBtn)
 	})
 	soundBtn.button.Importance = widget.HighImportance
+
+	// Not using background rectangle - color is stored but not visually applied
+	soundBtn.buttonBg = nil
+	coloredButton := soundBtn.button
 
 	// Create restart button (small square) with themed icon
 	restartBtn := widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {
@@ -936,17 +1055,27 @@ func (sb *Soundboard) loadSoundFromPath(filePath string) bool {
 	removeBtnContainer.Resize(fyne.NewSize(40, 40))
 	removeBtn.Resize(fyne.NewSize(40, 40))
 
-	// Create container for control buttons at the bottom (small squares)
-	buttonRow := container.NewHBox(restartBtnContainer, removeBtnContainer)
+	// Create color picker button (small square)
+	colorBtn := widget.NewButtonWithIcon("", theme.ColorPaletteIcon(), func() {
+		sb.showColorPicker(soundBtn)
+	})
+	colorBtn.Importance = widget.MediumImportance
+	colorBtnContainer := container.NewWithoutLayout(colorBtn)
+	colorBtnContainer.Resize(fyne.NewSize(40, 40))
+	colorBtn.Resize(fyne.NewSize(40, 40))
 
-	// Create container with button and progress bar (main content)
-	btnContent := container.NewVBox(
-		soundBtn.button,
+	// Create container for control buttons at the bottom (small squares)
+	buttonRow := container.NewHBox(restartBtnContainer, removeBtnContainer, colorBtnContainer)
+
+	// Create bottom section with progress bar and control buttons
+	bottomSection := container.NewVBox(
 		soundBtn.progressBar,
+		buttonRow,
 	)
 
-	// Create container with main content and control buttons at bottom
-	btnContainer := container.NewBorder(nil, buttonRow, nil, nil, btnContent)
+	// Create container with main button filling center and bottom section at bottom
+	// The main button will expand to fill all available vertical space
+	btnContainer := container.NewBorder(nil, bottomSection, nil, nil, coloredButton)
 	soundBtn.container = btnContainer
 
 	sb.sounds = append(sb.sounds, soundBtn)
