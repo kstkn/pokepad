@@ -17,13 +17,30 @@ A simple soundboard application for Windows built with Go. This app allows you t
 
 ## Building
 
-1. Clone or download this repository
-2. Open a terminal in the project directory
-3. Run:
+**Important:** This app must be built on Windows, or cross-compiled with CGO enabled.
+
+### On Windows:
+
+1. Open Command Prompt or PowerShell in the project directory
+2. Run:
    ```bash
    go mod download
    go build -o soundboard.exe .
    ```
+
+Or simply run the provided batch file:
+```bash
+build-windows.bat
+```
+
+### Cross-compiling from macOS/Linux:
+
+Cross-compiling GUI apps with Fyne requires CGO and a Windows C compiler toolchain. It's recommended to build directly on Windows instead.
+
+If you must cross-compile, you'll need:
+- CGO enabled
+- MinGW-w64 or similar Windows C compiler toolchain
+- Then run: `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -o soundboard.exe .`
 
 ## Running
 
