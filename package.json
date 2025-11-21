@@ -40,6 +40,10 @@
       "category": "public.app-category.utilities",
       "target": [
         {
+          "target": "dmg",
+          "arch": ["arm64"]
+        },
+        {
           "target": "dir",
           "arch": ["arm64"]
         }
@@ -48,6 +52,10 @@
     "win": {
       "icon": "launchpad.png",
       "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
         {
           "target": "dir",
           "arch": ["x64"]

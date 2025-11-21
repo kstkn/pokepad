@@ -68,6 +68,30 @@ npm run build
 
 **Note:** The first build may take a while as electron-builder downloads the necessary Electron binaries for packaging.
 
+## Continuous Integration
+
+This project uses GitHub Actions to automatically build packages for macOS and Windows:
+
+- **Build workflow**: Runs on pull requests and can be triggered manually
+- **Release workflow**: Automatically creates GitHub releases when you push a version tag (e.g., `v1.0.0`)
+
+### Creating a Release
+
+To create a new release:
+
+1. Update the version in `package.json`
+2. Commit your changes
+3. Create and push a version tag:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+The GitHub Actions workflow will automatically:
+- Build macOS (DMG) and Windows (NSIS installer) packages
+- Create a GitHub release with the built packages
+- Upload artifacts for download
+
 ## Requirements
 
 - Node.js (v16 or higher recommended)
