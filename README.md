@@ -68,6 +68,35 @@ npm run build
 
 **Note:** The first build may take a while as electron-builder downloads the necessary Electron binaries for packaging.
 
+### macOS Gatekeeper Warning
+
+If you see a "damaged and can't be opened" error on macOS, this is because the app isn't code signed. To run it:
+
+**Terminal method (recommended):**
+1. Open Terminal
+2. Navigate to where you downloaded/extracted the app (usually Downloads folder)
+3. Run this command (adjust the path if needed):
+   ```bash
+   xattr -cr pokepad.app
+   ```
+   Or if it's in a specific location:
+   ```bash
+   xattr -cr /path/to/pokepad.app
+   ```
+4. Try opening the app again
+
+**Alternative method:**
+If the above doesn't work, you may need to disable Gatekeeper temporarily (not recommended for security):
+```bash
+sudo spctl --master-disable
+```
+Then re-enable it after:
+```bash
+sudo spctl --master-disable
+```
+
+**Note:** Once code signing is set up, this warning will no longer appear.
+
 ## Continuous Integration
 
 This project uses GitHub Actions to automatically build packages for macOS and Windows:

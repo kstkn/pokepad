@@ -97,8 +97,17 @@ jobs:
             - **Windows (x64)**: Download the `.exe` installer
 
             ### Installation
-            - **macOS**: Open the DMG file and drag Pokepad to your Applications folder
+            - **macOS**: 
+              1. Open the DMG file and drag Pokepad to your Applications folder (or any location)
+              2. If you see a "damaged" error, open Terminal and run:
+                 ```bash
+                 xattr -cr /Applications/pokepad.app
+                 ```
+                 (Adjust the path if you installed it elsewhere)
+              3. Try opening the app again
             - **Windows**: Run the installer and follow the setup wizard
+
+            **Note:** macOS apps are currently unsigned. Code signing will be added in a future release.
 
             ### Changes
             See the [changelog](https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.VERSION }}^...v${{ steps.get_version.outputs.VERSION }}) for details.
