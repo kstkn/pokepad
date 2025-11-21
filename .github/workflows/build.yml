@@ -83,11 +83,12 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Create or Update Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release-assets/*
+          tag_name: ${{ github.ref_name }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
+          files: release-assets/*
           body: |
             ## Pokepad ${{ steps.get_version.outputs.VERSION }}
 
@@ -103,5 +104,6 @@ jobs:
             See the [changelog](https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.VERSION }}^...v${{ steps.get_version.outputs.VERSION }}) for details.
           draft: false
           prerelease: false
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
