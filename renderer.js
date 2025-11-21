@@ -34,12 +34,12 @@ let dragSortingEnabled = false;
 let pendingTransferFilePath = null;
 let dragSourceTabId = null;
 
-const TABS_STORAGE_KEY = 'soundboardTabs';
-const TAB_DATA_STORAGE_KEY = 'soundboardTabData';
-const ACTIVE_TAB_STORAGE_KEY = 'soundboardActiveTab';
-const LEGACY_FILES_KEY = 'soundboardFiles';
-const LEGACY_CUES_KEY = 'soundboardCuePositions';
-const LEGACY_NAMES_KEY = 'soundboardCustomNames';
+const TABS_STORAGE_KEY = 'pokepadTabs';
+const TAB_DATA_STORAGE_KEY = 'pokepadTabData';
+const ACTIVE_TAB_STORAGE_KEY = 'pokepadActiveTab';
+const LEGACY_FILES_KEY = 'pokepadFiles';
+const LEGACY_CUES_KEY = 'pokepadCuePositions';
+const LEGACY_NAMES_KEY = 'pokepadCustomNames';
 
 let tabs = [];
 let tabData = {};
