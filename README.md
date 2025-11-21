@@ -78,6 +78,10 @@ npm run build
 - macOS (Apple Silicon - arm64)
 - Windows (x64)
 
+## Code Signing Policy
+
+Free code signing provided by SignPath.io, certificate by SignPath Foundation. See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) for details.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
