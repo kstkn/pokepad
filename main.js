@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 
 let mainWindow;
+const iconPath = path.join(__dirname, 'launchpad.png');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -9,6 +10,7 @@ function createWindow() {
     height: 800,
     title: 'soundboard',
     fullscreen: true,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -22,7 +24,12 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  if (process.platform === 'darwin' && app.dock && typeof app.dock.setIcon === 'function') {
+    app.dock.setIcon(iconPath);
+  }
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

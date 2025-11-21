@@ -20,6 +20,7 @@
     "appId": "com.soundboard.app",
     "productName": "soundboard",
     "mac": {
+      "icon": "launchpad.png",
       "category": "public.app-category.utilities",
       "target": [
         {
@@ -29,6 +30,7 @@
       ]
     },
     "win": {
+      "icon": "launchpad.png",
       "target": [
         {
           "target": "dir",
@@ -40,7 +42,8 @@
       "main.js",
       "index.html",
       "renderer.js",
-      "styles.css"
+      "styles.css",
+      "launchpad.png"
     ]
   }
 }

@@ -8,13 +8,20 @@
 </head>
 <body>
   <div class="container" style="min-height: 100vh; background: #1a1a1a;">
-    <header style="padding: 8px; display: flex; justify-content: flex-end;">
+    <header style="padding: 8px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; gap: 8px;">
+        <button id="toggleDragBtn" class="select-btn" style="background: #444; color: #e0e0e0; border: 1px solid #666; padding: 4px 12px; font-size: 11px; border-radius: 4px; cursor: pointer;">Edit</button>
+      </div>
       <button id="selectFilesBtn" class="select-btn" style="background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">Select Files</button>
     </header>
+    <div class="tabs-bar">
+      <div id="tabsContainer" class="tabs-container"></div>
+      <button id="addTabBtn" class="tab-add-btn" title="Add tab">+</button>
+    </div>
     <div id="cardsContainer" class="cards-container placeholder" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #666; text-align: center;">
       <div>
-        <p style="font-size: 18px; margin: 10px 0;">Click "Select Files" to get started</p>
-        <p class="hint" style="font-size: 14px; color: #555;">Files will be added to existing cards</p>
+        <p style="font-size: 18px; margin: 10px 0;">Click "Select Files" to add sounds to this tab</p>
+        <p class="hint" style="font-size: 14px; color: #555;">Each tab keeps its own set of cards</p>
       </div>
     </div>
   </div>
@@ -22,11 +29,34 @@
   <!-- Rename Dialog -->
   <div id="renameDialog" class="rename-dialog" style="display: none;">
     <div class="rename-dialog-content">
-      <h3>Rename Card</h3>
+      <h3 id="renameDialogTitle">Rename Card</h3>
       <input type="text" id="renameInput" class="rename-input" placeholder="Enter new name">
       <div class="rename-dialog-buttons">
         <button id="renameCancelBtn" class="rename-btn-cancel">Cancel</button>
         <button id="renameOkBtn" class="rename-btn-ok">OK</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Transfer Dialog -->
+  <div id="transferDialog" class="rename-dialog" style="display: none;">
+    <div class="rename-dialog-content transfer-dialog-content">
+      <h3>Move or Copy Card</h3>
+      <label for="transferTabSelect" style="color: #ccc; font-size: 13px;">Destination tab</label>
+      <select id="transferTabSelect" class="transfer-select"></select>
+      <div class="transfer-actions">
+        <label>
+          <input type="radio" name="transferAction" id="transferMoveRadio" value="move" checked>
+          Move
+        </label>
+        <label>
+          <input type="radio" name="transferAction" id="transferCopyRadio" value="copy">
+          Copy
+        </label>
+      </div>
+      <div class="rename-dialog-buttons">
+        <button id="transferCancelBtn" class="rename-btn-cancel">Cancel</button>
+        <button id="transferOkBtn" class="rename-btn-ok">Apply</button>
       </div>
     </div>
   </div>
