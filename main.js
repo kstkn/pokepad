@@ -51,6 +51,7 @@ ipcMain.handle('select-files', async () => {
     properties: ['openFile', 'multiSelections'],
     filters: [
       { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'] },
+      { name: 'Video Files (audio only)', extensions: ['mp4', 'mpeg', 'mpg', 'mov', 'avi', 'mkv', 'webm'] },
       { name: 'All Files', extensions: ['*'] }
     ]
   });

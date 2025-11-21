@@ -617,12 +617,20 @@ function updateCardDragState() {
   });
 }
 
-let currentAudio = null;
+let currentMedia = null; // Can be Audio or Video element
 let selectedFiles = [];
 let currentPlayingCard = null;
 let progressAnimationFrame = null;
+let fadeTimer = null; // Track fade-out timer
 let cuePositions = new Map(); // Store cue positions per file path
 let customNames = new Map(); // Store custom display names per file path
+
+// Check if file is a video file
+function isVideoFile(filePath) {
+  const videoExtensions = ['.mp4', '.mpeg', '.mpg', '.mov', '.avi', '.mkv', '.webm'];
+  const ext = path.extname(filePath).toLowerCase();
+  return videoExtensions.includes(ext);
+}
 
 // Load persisted cue positions
 function loadCuePositions() {
@@ -770,7 +778,7 @@ function setupEventListeners() {
     
     if (e.key === ' ' && !isInput && !isDialogOpen) {
       e.preventDefault();
-      if (currentAudio) {
+      if (currentMedia) {
         stopAudio();
       }
     }
@@ -881,9 +889,21 @@ function formatTime(seconds) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+// Update rewind button state based on current time
+function updateRewindButton() {
+  if (!currentMedia || !currentPlayingCard) return;
+  
+  const rewindBtn = currentPlayingCard.querySelector('.rewind-btn');
+  if (rewindBtn) {
+    // Enable rewind button only if current time is not 0:00
+    const isAtStart = currentMedia.currentTime < 0.1; // Use small threshold for floating point comparison
+    rewindBtn.disabled = isAtStart;
+  }
+}
+
 // Update progress bar
 function updateProgress() {
-  if (!currentAudio || !currentPlayingCard) {
+  if (!currentMedia || !currentPlayingCard) {
     if (progressAnimationFrame) {
       cancelAnimationFrame(progressAnimationFrame);
       progressAnimationFrame = null;
@@ -895,34 +915,34 @@ function updateProgress() {
   const timeDisplay = currentPlayingCard.querySelector('.card-time');
   const cueLine = currentPlayingCard.querySelector('.progress-bar-cue');
   
-  if (progressBar && timeDisplay && currentAudio.duration) {
-    const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+  if (progressBar && timeDisplay && currentMedia.duration) {
+    const progress = (currentMedia.currentTime / currentMedia.duration) * 100;
     progressBar.style.width = `${progress}%`;
     
-    const current = formatTime(currentAudio.currentTime);
-    const total = formatTime(currentAudio.duration);
+    const current = formatTime(currentMedia.currentTime);
+    const total = formatTime(currentMedia.duration);
     timeDisplay.textContent = `${current} / ${total}`;
     
     // Update cue line position if cue exists
     const filePath = currentPlayingCard.dataset.filePath;
     const cueTime = filePath ? cuePositions.get(filePath) : undefined;
     if (cueTime !== undefined && cueLine) {
-      const cuePercentage = (cueTime / currentAudio.duration) * 100;
+      const cuePercentage = (cueTime / currentMedia.duration) * 100;
       cueLine.style.left = `${cuePercentage}%`;
       cueLine.style.display = 'block';
     }
   }
   
   // Continue updating smoothly
-  if (!currentAudio.paused) {
+  if (!currentMedia.paused) {
     progressAnimationFrame = requestAnimationFrame(updateProgress);
   }
 }
 
-// Pause audio playback
+// Pause media playback
 function pauseAudio() {
-  if (currentAudio && !currentAudio.paused) {
-    currentAudio.pause();
+  if (currentMedia && !currentMedia.paused) {
+    currentMedia.pause();
     if (progressAnimationFrame) {
       cancelAnimationFrame(progressAnimationFrame);
       progressAnimationFrame = null;
@@ -934,10 +954,10 @@ function pauseAudio() {
   }
 }
 
-// Resume audio playback
+// Resume media playback
 function resumeAudio() {
-  if (currentAudio && currentAudio.paused) {
-    currentAudio.play();
+  if (currentMedia && currentMedia.paused) {
+    currentMedia.play();
     if (currentPlayingCard) {
       currentPlayingCard.classList.remove('paused');
       currentPlayingCard.classList.add('playing');
@@ -946,17 +966,78 @@ function resumeAudio() {
   }
 }
 
-// Stop audio playback (fully reset)
+// Fade out media playback
+function fadeOutAudio(fadeDuration = 1000) {
+  if (!currentMedia || currentMedia.paused) {
+    stopAudio();
+    return;
+  }
+  
+  // Clear any existing fade timer
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+  
+  // Store reference to the media element that's fading
+  const fadingMedia = currentMedia;
+  const startVolume = fadingMedia.volume;
+  const startTime = Date.now();
+  const fadeInterval = 50; // Update volume every 50ms
+  
+  fadeTimer = setInterval(() => {
+    // Check if this is still the current media (not replaced by another card)
+    if (currentMedia !== fadingMedia) {
+      clearInterval(fadeTimer);
+      fadeTimer = null;
+      // Restore volume of the old media element
+      fadingMedia.volume = 1;
+      return;
+    }
+    
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / fadeDuration, 1);
+    
+    // Use exponential fade for smoother sound
+    const volume = startVolume * (1 - progress);
+    fadingMedia.volume = Math.max(0, volume);
+    
+    if (progress >= 1) {
+      clearInterval(fadeTimer);
+      fadeTimer = null;
+      // Only stop if this is still the current media
+      if (currentMedia === fadingMedia) {
+        stopAudio();
+      } else {
+        // Restore volume if media was replaced
+        fadingMedia.volume = 1;
+      }
+    }
+  }, fadeInterval);
+}
+
+// Stop media playback (fully reset)
 function stopAudio() {
+  // Clear any active fade timer
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+  
   if (progressAnimationFrame) {
     cancelAnimationFrame(progressAnimationFrame);
     progressAnimationFrame = null;
   }
   
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
-    currentAudio = null;
+  if (currentMedia) {
+    currentMedia.pause();
+    currentMedia.currentTime = 0;
+    currentMedia.volume = 1; // Reset volume to 1 for next playback
+    // Remove video element from DOM if it exists
+    if (currentMedia.tagName === 'VIDEO') {
+      currentMedia.remove();
+    }
+    currentMedia = null;
   }
   
   // Remove playing/paused class from all cards and reset progress
@@ -964,6 +1045,14 @@ function stopAudio() {
     card.classList.remove('playing', 'paused');
     const progressBar = card.querySelector('.progress-bar-fill');
     if (progressBar) progressBar.style.width = '0%';
+    
+    // Disable fade button
+    const fadeBtn = card.querySelector('.fade-btn');
+    if (fadeBtn) fadeBtn.disabled = true;
+    
+    // Disable rewind button
+    const rewindBtn = card.querySelector('.rewind-btn');
+    if (rewindBtn) rewindBtn.disabled = true;
     
     // Only reset time display for the playing card, preserve durations for others
     if (card === currentPlayingCard) {
@@ -984,25 +1073,47 @@ function stopAudio() {
   currentPlayingCard = null;
 }
 
-// Play audio file
+// Play media file (audio or video)
 function playAudio(filePath, cardElement) {
-  // Stop current audio if playing
+  // Stop current media if playing (this will also clear any fade timer)
   stopAudio();
   
-  // Update cue line position when audio loads
+  // Update cue line position when media loads
   const cardFilePath = cardElement.dataset.filePath || filePath;
   const cueTime = cardFilePath ? cuePositions.get(cardFilePath) : undefined;
   if (cueTime !== undefined) {
     const cueLine = cardElement.querySelector('.progress-bar-cue');
     const cueBtn = cardElement.querySelector('.cue-btn');
+    const playCueBtn = cardElement.querySelector('.play-cue-btn');
     if (cueLine && cueBtn) {
       // Will be updated when metadata loads
       cueBtn.classList.add('active');
     }
+    if (playCueBtn) {
+      playCueBtn.disabled = false;
+    }
+  } else {
+    // No cue exists, disable play-cue button
+    const playCueBtn = cardElement.querySelector('.play-cue-btn');
+    if (playCueBtn) {
+      playCueBtn.disabled = true;
+    }
   }
 
-  // Create new audio element
-  currentAudio = new Audio(filePath);
+  // Create new media element (Audio or Video)
+  // For video files, we only extract and play the audio track, not the video itself
+  const isVideo = isVideoFile(filePath);
+  if (isVideo) {
+    currentMedia = document.createElement('video');
+    currentMedia.src = filePath;
+    currentMedia.style.display = 'none'; // Hide video element - we only want the audio track
+    currentMedia.muted = false; // Ensure audio is not muted
+    currentMedia.volume = 1; // Start at full volume
+    document.body.appendChild(currentMedia);
+  } else {
+    currentMedia = new Audio(filePath);
+    currentMedia.volume = 1; // Start at full volume
+  }
   currentPlayingCard = cardElement;
   
   // Reset progress bar
@@ -1011,9 +1122,9 @@ function playAudio(filePath, cardElement) {
   const timeDisplay = cardElement.querySelector('.card-time');
   
   // Update time display when metadata loads
-  currentAudio.addEventListener('loadedmetadata', () => {
-    if (timeDisplay && currentAudio.duration && isFinite(currentAudio.duration)) {
-      const total = formatTime(currentAudio.duration);
+  currentMedia.addEventListener('loadedmetadata', () => {
+    if (timeDisplay && currentMedia.duration && isFinite(currentMedia.duration)) {
+      const total = formatTime(currentMedia.duration);
       timeDisplay.textContent = `0:00 / ${total}`;
       
       // Update cue line position
@@ -1021,7 +1132,7 @@ function playAudio(filePath, cardElement) {
       const cueTime = cardFilePath ? cuePositions.get(cardFilePath) : undefined;
       const cueLine = cardElement.querySelector('.progress-bar-cue');
       if (cueTime !== undefined && cueLine) {
-        const percentage = (cueTime / currentAudio.duration) * 100;
+        const percentage = (cueTime / currentMedia.duration) * 100;
         cueLine.style.left = `${percentage}%`;
         cueLine.style.display = 'block';
       }
@@ -1030,16 +1141,20 @@ function playAudio(filePath, cardElement) {
       const pendingCueTime = cardElement.dataset.pendingCueTime;
       if (pendingCueTime !== undefined) {
         const cueTime = parseFloat(pendingCueTime);
-        currentAudio.currentTime = cueTime;
+        currentMedia.currentTime = cueTime;
         delete cardElement.dataset.pendingCueTime;
         updateProgress();
+        updateRewindButton();
+      } else {
+        // Initialize rewind button state
+        updateRewindButton();
       }
     }
   });
   
   // If duration is already known, update immediately
-  if (timeDisplay && currentAudio.readyState >= 1) {
-    const total = formatTime(currentAudio.duration);
+  if (timeDisplay && currentMedia.readyState >= 1) {
+    const total = formatTime(currentMedia.duration);
     if (total !== '0:00') {
       timeDisplay.textContent = `0:00 / ${total}`;
     }
@@ -1048,8 +1163,8 @@ function playAudio(filePath, cardElement) {
     const cardFilePath = cardElement.dataset.filePath || filePath;
     const cueTime = cardFilePath ? cuePositions.get(cardFilePath) : undefined;
     const cueLine = cardElement.querySelector('.progress-bar-cue');
-    if (cueTime !== undefined && cueLine && currentAudio.duration) {
-      const percentage = (cueTime / currentAudio.duration) * 100;
+    if (cueTime !== undefined && cueLine && currentMedia.duration) {
+      const percentage = (cueTime / currentMedia.duration) * 100;
       cueLine.style.left = `${percentage}%`;
       cueLine.style.display = 'block';
     }
@@ -1058,25 +1173,31 @@ function playAudio(filePath, cardElement) {
     const pendingCueTime = cardElement.dataset.pendingCueTime;
     if (pendingCueTime !== undefined) {
       const cueTime = parseFloat(pendingCueTime);
-      currentAudio.currentTime = cueTime;
+      currentMedia.currentTime = cueTime;
       delete cardElement.dataset.pendingCueTime;
       updateProgress();
     }
   }
   
   // Start smooth progress updates
-  currentAudio.addEventListener('play', () => {
+  currentMedia.addEventListener('play', () => {
     if (currentPlayingCard) {
       currentPlayingCard.classList.remove('paused');
       currentPlayingCard.classList.add('playing');
+      // Enable fade button when playing
+      const fadeBtn = currentPlayingCard.querySelector('.fade-btn');
+      if (fadeBtn) fadeBtn.disabled = false;
     }
     updateProgress();
   });
   
-  currentAudio.addEventListener('pause', () => {
+  currentMedia.addEventListener('pause', () => {
     if (currentPlayingCard) {
       currentPlayingCard.classList.remove('playing');
       currentPlayingCard.classList.add('paused');
+      // Disable fade button when paused
+      const fadeBtn = currentPlayingCard.querySelector('.fade-btn');
+      if (fadeBtn) fadeBtn.disabled = true;
     }
     if (progressAnimationFrame) {
       cancelAnimationFrame(progressAnimationFrame);
@@ -1084,24 +1205,27 @@ function playAudio(filePath, cardElement) {
     }
   });
   
-  currentAudio.addEventListener('timeupdate', updateProgress);
+  currentMedia.addEventListener('timeupdate', () => {
+    updateProgress();
+    updateRewindButton();
+  });
   
-  currentAudio.addEventListener('ended', () => {
+  currentMedia.addEventListener('ended', () => {
     stopAudio();
   });
 
-  currentAudio.addEventListener('error', (e) => {
-    console.error('Error playing audio:', e);
+  currentMedia.addEventListener('error', (e) => {
+    console.error('Error playing media:', e);
     stopAudio();
   });
 
-  currentAudio.play().catch(error => {
-    console.error('Error playing audio:', error);
+  currentMedia.play().catch(error => {
+    console.error('Error playing media:', error);
     stopAudio();
   });
 }
 
-// Load audio metadata and display duration
+// Load media metadata and display duration
 function loadAudioDuration(filePath, cardElement) {
   try {
     if (!cardElement || !filePath) return;
@@ -1109,19 +1233,28 @@ function loadAudioDuration(filePath, cardElement) {
     const timeDisplay = cardElement.querySelector('.card-time');
     if (!timeDisplay) return;
     
-    const audio = new Audio(filePath);
+    // For video files, we only extract audio metadata, not display video
+    const isVideo = isVideoFile(filePath);
+    const media = isVideo ? document.createElement('video') : new Audio(filePath);
+    if (isVideo) {
+      media.src = filePath;
+      media.style.display = 'none'; // Hide video - we only need audio metadata
+      document.body.appendChild(media);
+    }
     
-    audio.addEventListener('loadedmetadata', () => {
+    media.addEventListener('loadedmetadata', () => {
       try {
-        if (audio.duration && isFinite(audio.duration)) {
-          const total = formatTime(audio.duration);
+        if (media.duration && isFinite(media.duration)) {
+          const total = formatTime(media.duration);
           timeDisplay.textContent = `0:00 / ${total}`;
 
           const iconElement = cardElement.querySelector('.card-icon');
           if (iconElement) {
-            const isShort = audio.duration < 10;
-            iconElement.textContent = isShort ? '' : '\uD83C\uDFBC';
-            iconElement.title = isShort ? 'Short sound (under 10s)' : 'Long sound (10s or longer)';
+            const isShort = media.duration < 10;
+            iconElement.textContent = isShort ? '' : (isVideo ? '\uD83C\uDFA5' : '\uD83C\uDFBC');
+            iconElement.title = isShort 
+              ? `Short ${isVideo ? 'video' : 'sound'} (under 10s)` 
+              : `${isVideo ? 'Video' : 'Long sound'} (10s or longer)`;
           }
           
           // Update cue line position if cue exists
@@ -1130,30 +1263,50 @@ function loadAudioDuration(filePath, cardElement) {
             const cueTime = cuePositions.get(cardFilePath);
             if (cueTime !== undefined && isFinite(cueTime)) {
               const cueLine = cardElement.querySelector('.progress-bar-cue');
-              if (cueLine && audio.duration > 0) {
-                const percentage = (cueTime / audio.duration) * 100;
+              if (cueLine && media.duration > 0) {
+                const percentage = (cueTime / media.duration) * 100;
                 cueLine.style.left = `${percentage}%`;
                 cueLine.style.display = 'block';
                 const cueBtn = cardElement.querySelector('.cue-btn');
+                const playCueBtn = cardElement.querySelector('.play-cue-btn');
                 if (cueBtn) {
                   cueBtn.classList.add('active');
                 }
+                if (playCueBtn) {
+                  playCueBtn.disabled = false;
+                }
+              }
+            } else {
+              // No cue exists, disable play-cue button
+              const playCueBtn = cardElement.querySelector('.play-cue-btn');
+              if (playCueBtn) {
+                playCueBtn.disabled = true;
               }
             }
           }
         }
+        // Clean up video element if it was created
+        if (isVideo && media.parentNode) {
+          media.remove();
+        }
       } catch (error) {
         console.error('Error updating cue line:', error);
+        if (isVideo && media.parentNode) {
+          media.remove();
+        }
       }
     });
     
-    audio.addEventListener('error', (e) => {
+    media.addEventListener('error', (e) => {
       // Silently fail - duration just won't be shown
-      console.warn('Error loading audio duration for:', filePath);
+      console.warn('Error loading media duration for:', filePath);
+      if (isVideo && media.parentNode) {
+        media.remove();
+      }
     });
     
     // Load metadata
-    audio.load();
+    media.load();
   } catch (error) {
     console.error('Error in loadAudioDuration:', error);
   }
@@ -1286,9 +1439,10 @@ function createCard(filePath) {
       <button class="transfer-btn" title="Move or copy to another tab">⇆</button>
       <button class="rename-btn" title="Rename card">✎</button>
       <button class="remove-btn" title="Remove card">×</button>
-      <button class="rewind-btn">⏮</button>
+      <button class="fade-btn" title="Fade out and stop" disabled>↘</button>
       <button class="cue-btn" title="Set/clear cue point">C</button>
-      <button class="play-cue-btn" title="Play from cue point">▶C</button>
+      <button class="play-cue-btn" title="Play from cue point" disabled>▶C</button>
+      <button class="rewind-btn" title="Rewind to start" disabled>⏮</button>
     `;
     
     // Store file path on card for comparison
@@ -1385,13 +1539,13 @@ function createCard(filePath) {
     progressBar.addEventListener('click', (e) => {
       e.stopPropagation(); // Prevent card click
       
-      if (currentPlayingCard === card && currentAudio && currentAudio.duration) {
+      if (currentPlayingCard === card && currentMedia && currentMedia.duration) {
         const rect = progressBar.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const percentage = clickX / rect.width;
-        const seekTime = percentage * currentAudio.duration;
+        const seekTime = percentage * currentMedia.duration;
         
-        currentAudio.currentTime = seekTime;
+        currentMedia.currentTime = seekTime;
         updateProgress();
       }
     });
@@ -1520,9 +1674,10 @@ function createCard(filePath) {
     rewindBtn.addEventListener('click', (e) => {
       e.stopPropagation(); // Prevent card click
       
-      if (currentPlayingCard === card && currentAudio) {
-        currentAudio.currentTime = 0;
+      if (currentPlayingCard === card && currentMedia && !rewindBtn.disabled) {
+        currentMedia.currentTime = 0;
         updateProgress();
+        updateRewindButton();
       }
     });
     
@@ -1545,17 +1700,19 @@ function createCard(filePath) {
         cuePositions.delete(cardFilePath);
         cueLine.style.display = 'none';
         cueBtn.classList.remove('active');
+        playCueBtn.disabled = true;
         saveCuePositions();
-      } else if (currentPlayingCard === card && currentAudio && currentAudio.duration) {
+      } else if (currentPlayingCard === card && currentMedia && currentMedia.duration) {
         // Set cue at current playback position
-        const currentTime = currentAudio.currentTime;
-        const duration = currentAudio.duration;
+        const currentTime = currentMedia.currentTime;
+        const duration = currentMedia.duration;
         
         cuePositions.set(cardFilePath, currentTime);
         const percentage = (currentTime / duration) * 100;
         cueLine.style.left = `${percentage}%`;
         cueLine.style.display = 'block';
         cueBtn.classList.add('active');
+        playCueBtn.disabled = false;
         saveCuePositions();
       }
     });
@@ -1565,20 +1722,26 @@ function createCard(filePath) {
       e.stopPropagation(); // Prevent card click
       
       const cardFilePath = card.dataset.filePath;
-      if (!cardFilePath) return;
+      if (!cardFilePath || playCueBtn.disabled) return;
       
       const cueTime = cuePositions.get(cardFilePath);
       if (cueTime === undefined) return;
       
-      if (currentPlayingCard === card && currentAudio) {
+      if (currentPlayingCard === card && currentMedia) {
         // Card is already playing, just seek to cue
-        currentAudio.currentTime = cueTime;
+        currentMedia.currentTime = cueTime;
         updateProgress();
+        updateRewindButton();
       } else {
         // Card is not playing, start playback from cue point
         if (cardFilePath) {
           // Start playing the card
-          document.querySelectorAll('.card').forEach(c => c.classList.remove('playing', 'paused'));
+          document.querySelectorAll('.card').forEach(c => {
+            c.classList.remove('playing', 'paused');
+            // Disable fade button on all cards
+            const fadeBtn = c.querySelector('.fade-btn');
+            if (fadeBtn) fadeBtn.disabled = true;
+          });
           card.classList.add('playing');
           
           // Store cue time to apply after audio loads
@@ -1589,13 +1752,31 @@ function createCard(filePath) {
       }
     });
     
+    // Add fade button handler
+    const fadeBtn = card.querySelector('.fade-btn');
+    if (fadeBtn) {
+      fadeBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent card click
+        
+        const cardFilePath = card.dataset.filePath;
+        if (!cardFilePath) return;
+        
+        // Only fade if this card is currently playing and button is enabled
+        if (currentPlayingCard === card && currentMedia && !currentMedia.paused && !fadeBtn.disabled) {
+          fadeOutAudio(1000); // 1 second fade
+        }
+      });
+    }
+    
     // Initialize cue line if cue exists (will be positioned when audio loads)
     const cardFilePath = card.dataset.filePath;
     const existingCue = cardFilePath ? cuePositions.get(cardFilePath) : undefined;
     if (existingCue !== undefined) {
       cueBtn.classList.add('active');
+      playCueBtn.disabled = false;
     } else {
       cueLine.style.display = 'none';
+      playCueBtn.disabled = true;
     }
     
     card.addEventListener('click', (e) => {
@@ -1611,13 +1792,15 @@ function createCard(filePath) {
           e.target.classList.contains('cue-btn') ||
           e.target.closest('.cue-btn') ||
           e.target.classList.contains('play-cue-btn') ||
-          e.target.closest('.play-cue-btn')) {
+          e.target.closest('.play-cue-btn') ||
+          e.target.classList.contains('fade-btn') ||
+          e.target.closest('.fade-btn')) {
         return;
       }
       
       // If this card is already playing, pause it
-      if (currentPlayingCard === card && currentAudio) {
-        if (!currentAudio.paused) {
+      if (currentPlayingCard === card && currentMedia) {
+        if (!currentMedia.paused) {
           pauseAudio();
         } else {
           // If paused, resume it
@@ -1627,7 +1810,12 @@ function createCard(filePath) {
       }
       
       // Otherwise, play the audio
-      document.querySelectorAll('.card').forEach(c => c.classList.remove('playing', 'paused'));
+      document.querySelectorAll('.card').forEach(c => {
+        c.classList.remove('playing', 'paused');
+        // Disable fade button on all cards
+        const fadeBtn = c.querySelector('.fade-btn');
+        if (fadeBtn) fadeBtn.disabled = true;
+      });
       card.classList.add('playing');
       playAudio(filePath, card);
     });

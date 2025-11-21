@@ -6,7 +6,7 @@ A simple Electron app for organizing and playing audio files as cards in a grid 
 
 ## Features
 
-- Select multiple audio files using a file picker
+- Select multiple audio files and video files (extracts audio track only)
 - Files are displayed as cards in an evenly distributed grid
 - Play, pause, and control audio playback
 - Set cue points for quick access to specific positions
@@ -33,7 +33,8 @@ npm start
 ## Usage
 
 1. Click the "Select Files" button
-2. Choose one or more audio files from the file picker
+2. Choose one or more audio or video files from the file picker (supports MP3, WAV, MP4, MPEG, and more)
+   - Note: For video files (MP4, MPEG), only the audio track will be played
 3. Files will be displayed as cards in a grid layout
 4. Click a card to play/pause the audio
 5. Use the controls on each card to:
